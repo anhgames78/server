@@ -96,6 +96,7 @@ io.on('connection', function(socket){
       console.log(socket.id+' ngat ket noi');
     })
     socket.on('Client-send-msg', function(msg){
-      console.log(socket.id+' vua gui: '+msg);
+	console.log(socket.id+' vua gui: '+msg);
+	io.sockets.emit("Server-send-msg",msg);
     })
 })
