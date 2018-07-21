@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Chat room</title>
+    
+    <meta charset="UTF-8">
+    <meta name="description" content="Chat Room">
+    <meta name="keywords" content="HTML,CSS,XML,JavaScript">
+    <meta name="author" content="Nguyen Tuan Anh">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <link rel='stylesheet' href='/stylesheets/chat.css' />
+    <script src="/javascripts/jquery.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      var socket = io();
+
+
+   
+      $(document).ready(function(){
+        
+        $(".show_nickname").hide();
+        $(".user_title").hide();
+        $(".user_list").hide();
+        $(".chat_list").hide();
+        $(".chat_msg").hide();
+        
+        socket.emit("Client-send-username", "<%= currentUser %>");
+                    
+        socket.on("Server-send-info", function(data){
+          if (data.nickname !== ""){
+            $(".show_nickname").show();
+            $(".mynickname").text(data.nickname);
+          }
+          if (data.roomname !== ""){
+            $(".user_title").show();
+            $(".myroom").text(data.roomname);
+            $(".user_list").show();
+            $(".chat_list").show();
+            $(".chat_msg").show();
+          }
+        });            
+   
+        socket.on("Server-send-rooms", function(data){
+          $("#room_list").html("");
+          
+          data.forEach(function(element){
+            $("#room_list").append("<option>" + element + "</option>");
+          });
+        });
+
+        socket.on("Server-send-join-room-thanh-cong", function(data){
+          alert("Ban da join room thanh cong!!!");
+          $(".user_title").show();
+          $(".myroom").text(data);
+          $(".user_list").show();
+          $(".chat_list").show();
+          $(".chat_msg").show();
+        });
+        
+        socket.on("Server-send-join-room-that-bai", function(){
+          alert("Ton tai nickname " + $(".mynickname").text() + " trong room ban dinh vao!!!");
+        });
+        
+        $("#button_tao_nickname").click(function(){
+          if ($("#tao_nickname").val() === ""){
+            alert("Vui long chon nickname");
+          } else if ($("#tao_nickname").val() === $(".mynickname").text()){
+            alert("Day la nickname hien tai cua ban!!!");
+          } else {
+            socket.emit("Client-send-tao-nickname", $("#tao_nickname").val());
+          };
+        });
+        
+        $("#button_vao_room").click(function(){
+          if ($(".mynickname").text() === "" || $("#room_list option:selected").text() === "") {
+            alert("Hay chon room va nickname (neu chua co) truoc khi vao room!!!");
+          } else if ($("#room_list option:selected").text() === $(".myroom").text()) {
+            alert("Ban dang o trong room nay roi!!!");
+          } else {
+            socket.emit("Client-send-join-room", $("#room_list option:selected").text());
+          };
+        });
+        
+         $("#button_tao_room").click(function(){
+          if ($(".mynickname").text() === "" || $("#tao_room").val() === "") {
+            alert("Dat ten room va nickname (neu chua co) truoc khi tao room!!!");
+          } else if ($("#tao_room").val() === $(".myroom").text()) {
+            alert("Ban dang o trong room nay roi!!!");
+          } else {
+            socket.emit("Client-send-join-room", $("#tao_room").val());
+          };
+        });
+                                                     
+        socket.on("Server-send-nickname-ok", function(data){
+          alert("Nickname doi thanh cong!!!. Nickname hien tai cua ban la: " + data);
+          $(".show_nickname").show();
+          $(".mynickname").text(data);
+        });
+        
+        socket.on("Server-send-nickname-nook", function(data){
+          alert("Nickname " + data + " da co trong room!!!");
+        });
+        
+        socket.on("Server-send-danhsach-users", function(data){
+          $(".user_list").html("");
+          data.forEach(function(element){
+            $(".user_list").append("<div><button type='button' class='name_button'>" + element + "</button></div>");
+          });
+          $(".user_list").append("<div><button type='button' class='name_button'>tat ca</button></div>");
+          
+        });
+        
+        socket.on("Server-send-msg", function(msg){
+          $(".chat_text").prepend(msg + ";\n");
+        });
+        
+              
+        $(".user_list").click(function(){
+          $(".name_button").click(function(){
+            var name = $(this).text();
+            $(".myspan").text(name);
+          });
+        });
+                           
+        $("#chat_button").click(function(){
+          if ($(".myspan").text() === "tat ca"){
+          socket.emit("Client-send-msg", $("#message").val());
+          } else {
+            socket.emit("Client-send-private-msg", { "name":$(".myspan").text(), "message":$("#message").val() });
+          };                      
+        });
+        
+        $("#logout_button").click(function(){
+          socket.emit("Client-send-logout");
+        });
+        
+        var input = document.getElementById("message");
+        input.addEventListener("keyup", function(event) {
+          event.preventDefault();
+          if (event.keyCode === 13) {
+            document.getElementById("chat_button").click();
+          }
+        });
+      });
+        
+
+      
+      
+    </script>
+  </head>
+  <body>
+    <div class="grid">
+      <div class="header">
+        Header
+      </div>
+      <div class="room_list_left">
+        <label for="tao_room">Tao room moi: </label>
+        <input type="text" name="ten_room_moi" id="tao_room">
+        <button type="button" class="button" id="button_tao_room">Tao</button>
+      </div>
+      <div class="room_list_right">
+        <label for="room_list">Rooms hien co: </label>
+        <select id="room_list">
+          <option></option>
+        </select>
+        <button type="button" class="button" id="button_vao_room">Vao</button>
+      </div>
+      <div class="nickname">
+        <label for="tao_nickname">Tao nickname moi: </label>
+        <input type="text" name="nickname" id="tao_nickname">
+        <button type="button" class="button" id="button_tao_nickname">Tao</button>
+      </div>
+      <div class="user_title">
+        Room: <span class="myroom"></span>, xin chao ban!. Danh sach trong room:
+      </div>
+      <div class="chat_title">
+        <form method="post" action="/logout">
+          Xin chao <%= currentUser %>!!!
+          <button type="submit" class="button inline" id="logout_button">Dang xuat</button>
+          <div class="show_nickname inline">
+            Nickname cua ban la: <span class="mynickname"></span>.
+          </div>
+        </form>
+      </div>
+      <div class="user_list">
+        Liet ke user
+      </div>
+      <div class="chat_list">
+        <textarea class="chat_text">
+
+
+        </textarea>
+      </div>
+      <div class="chat_msg">
+        <label for="message">Nhap noi dung chat den <span class="myspan">tat ca</span>:</label>
+        <input type="text" name="message" id="message" size="50" > <!– name to get data, id to fix label, value to default -> 
+        <button type="button" class="button" id="chat_button">Gui</button>
+      </div>
+      <div class="footer">
+        Copyright@Tuan Anh 2018
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,157 @@
+/* Trang chinh */
+
+* {
+  margin: 0;
+  padding: 0;
+}
+
+/* Grid cha */
+
+@media screen and (min-width: 720px) {
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    grid-template-rows: 1fr 1fr 1fr 10fr 1fr 1fr;
+    grid-column-gap: 0;
+    grid-row-gap: 0;
+    grid-template-areas:
+      "header header header header header header"
+      "nickname nickname room_list_left room_list_left room_list_right room_list_right"
+      "chat_title chat_title chat_title chat_title user_title user_title"
+      "chat_list chat_list chat_list chat_list user_list user_list"
+      "chat_msg chat_msg chat_msg chat_msg . ."
+      "footer footer footer footer footer footer";
+  }
+  .chat_text {
+    height: 25em;
+    width: 50em;
+  }
+}
+
+@media screen and (max-width: 720px) {
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    grid-template-rows: 1fr 1fr 3fr 1fr 5fr 1fr;
+    grid-column-gap: 0;
+    grid-row-gap: 0;
+    grid-template-areas:
+      "nickname nickname room_list_left room_list_left room_list_right room_list_right"
+      "user_title user_title user_title user_title user_title user_title"
+      "user_list user_list user_list user_list user_list user_list"
+      "chat_title chat_title chat_title chat_title chat_title chat_title"
+      "chat_list chat_list chat_list chat_list chat_list chat_list"
+      "chat_msg chat_msg chat_msg chat_msg chat_msg chat_msg";
+  }
+  .footer {
+    display: none;
+  }
+  .header {
+    display: none;
+  }
+  .chat_text {
+    height: 10em;
+    width: 20em;
+  }
+}
+ 
+/* Grid con */  
+
+.header {
+  grid-area: header;
+  background-color: pink;
+}
+
+.room_list_left {
+  grid-area: room_list_left;
+  background-color: yellow;
+}
+
+.room_list_right {
+  grid-area: room_list_right;
+  background-color: orange;
+}
+
+.nickname {
+  grid-area: nickname;
+  background-color: red;
+}
+
+.user_title {
+  grid-area: user_title;
+  background-color: pink;
+  justify-self: center;
+}
+
+.chat_title {
+  grid-area: chat_title;
+  background-color: yellow;
+  justify-self: center;
+}
+
+.user_list {
+  grid-area: user_list;
+  background-color: none;
+  justify-self: center;
+}
+
+.chat_list {
+  grid-area: chat_list;
+  background-color: none;
+  justify-self: center;
+}
+
+.chat_msg {
+  grid-area: chat_msg;
+  background-color: none;
+  justify-self: center;
+}
+
+.footer {
+  grid-area: footer;
+  background-color: red;
+}
+
+/* Dinh nghia thuoc tinh phan tu */
+
+.button {
+    background-color: blue;
+    border: 5px;
+    color: white;
+    padding: 10px 20px;
+    text-align: center;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.name_button {
+    background-color: green;
+    border: 5px;
+    color: black;
+    padding: 10px 20px;
+    text-align: center;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.chat_text::first-line { 
+    background-color: blue;
+    color: white;
+}
+
+.myspan {
+  color:blue;
+}
+
+.myroom {
+  color:purple;
+}
+
+.mynickname {
+  color:red;
+}
+
+.inline { 
+  display: inline-block;
+  margin: 2px;
+}

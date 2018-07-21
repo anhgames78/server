@@ -3,16 +3,55 @@
 /**
  * Module dependencies.
  */
-
+"use strict";
 var app = require('../app');
 var debug = require('debug')('server:server');
 var http = require('http');
+var mangUsers = [];
+var mangRooms = [];
+
+class user {
+    constructor (name, socketid, nickname, roomname) {
+      this.name = name;
+      this.socketid = socketid;
+      this.nickname = nickname;
+      this.roomname = roomname;
+    }
+}
+class room {
+    constructor (name, members) {
+      this.name = name;
+      this.members = members;
+    }
+}
+mangRooms[0] = new room("Toan",[]);
+mangRooms[1] = new room("Ly",[]);
+mangRooms[2] = new room("Hoa",[]);
+
+Array.prototype.pos = function(property,value) {
+  var i;
+  for (i = 0; i < this.length; i++) {
+    if (this[i][property] == value) {
+      return i;
+    }
+  }
+  return -1;
+};
+
+Array.prototype.list = function(property) {
+  var i;
+  var mang = [];
+  for (i = 0; i < this.length; i++) {
+    mang[i] = this[i][property];
+  }
+  return mang;
+};
 
 /**
  * Get port from environment and store in Express.
  */
 
-var port = normalizePort(process.env.PORT || '2000');
+var port = normalizePort(process.env.PORT || '3000');
 app.set('port', port);
 
 /**
@@ -59,9 +98,7 @@ function onError(error) {
     throw error;
   }
 
-  var bind = typeof port === 'string'
-    ? 'Pipe ' + port
-    : 'Port ' + port;
+  var bind = typeof port === 'string'? 'Pipe ' + port : 'Port ' + port;
 
   // handle specific listen errors with friendly messages
   switch (error.code) {
@@ -84,19 +121,116 @@ function onError(error) {
 
 function onListening() {
   var addr = server.address();
-  var bind = typeof addr === 'string'
-    ? 'pipe ' + addr
-    : 'port ' + addr.port;
+  var bind = typeof addr === 'string'? 'pipe ' + addr : 'port ' + addr.port;
   debug('Listening on ' + bind);
 }
 
 io.on('connection', function(socket){
-    console.log('co nguoi ket noi '+socket.id);
-    socket.on('disconnect', function(){
-      console.log(socket.id+' ngat ket noi');
-    })
-    socket.on('Client-send-msg', function(msg){
-	console.log(socket.id+' vua gui: '+msg);
-	io.sockets.emit("Server-send-msg",msg);
-    })
-})
+  
+  socket.on("Client-send-username", function(data){
+    socket.Username = data;
+    if (mangUsers.pos("name", data) === -1){                                               /*user moi*/
+      mangUsers.push(new user(data,socket.id,"",""));
+    } else {                                                                       /*user refresh: update socket id and send client store nickname and room*/
+      mangUsers[mangUsers.pos("name", data)].socketid = socket.id;
+      socket.emit('Server-send-info', mangUsers[mangUsers.pos("name", data)]);
+      if (mangUsers[mangUsers.pos("name", data)].roomname !== "") {
+        socket.join(mangUsers[mangUsers.pos("name", data)].roomname);
+        socket.emit("Server-send-danhsach-users", mangRooms[mangRooms.pos("name", mangUsers[mangUsers.pos("name", data)].roomname)].members);
+      }
+    } 
+    socket.emit('Server-send-rooms', mangRooms.list("name"));
+  });
+  
+  socket.on("Client-send-join-room", function(data){
+    var members_new_room = [];
+    var members_old_room = [];
+    var pos_user = mangUsers.pos("name", socket.Username);
+    var user_nickname = mangUsers[pos_user].nickname;
+    var pos_old_room;
+    var pos_new_room = mangRooms.pos("name", data);
+    
+    if (mangUsers[pos_user].roomname === ""){
+      pos_old_room = -1;
+    } else {
+      pos_old_room = mangRooms.pos("name", mangUsers[pos_user].roomname);
+    }
+    
+    if (pos_old_room !== -1){ members_old_room = mangRooms[pos_old_room].members}
+    if (pos_new_room !== -1){ members_new_room = mangRooms[pos_new_room].members}
+    
+    if (members_new_room.indexOf(user_nickname) !== -1){
+      socket.emit("Server-send-join-room-that-bai");
+    } else {
+      if (pos_old_room !== -1){
+        members_old_room.splice(members_old_room.indexOf(user_nickname), 1);
+        if (members_old_room.length > 0) {
+          mangRooms[pos_old_room].members = members_old_room;
+          socket.to(mangUsers[pos_user].roomname).emit("Server-send-danhsach-users", members_old_room);
+        } else {
+          mangRooms.splice(pos_old_room, 1);
+        }
+      }
+      members_new_room.push(user_nickname);
+      if (pos_new_room === -1){
+        mangRooms.push(new room(data, members_new_room));        
+      } else {
+        mangRooms[pos_new_room].members = members_new_room;
+      }
+      io.sockets.emit("Server-send-rooms", mangRooms.list("name"));
+      socket.leave(mangUsers[pos_user].roomname);
+      socket.join(data);
+      mangUsers[pos_user].roomname = data;  
+      socket.emit("Server-send-join-room-thanh-cong", data);
+      io.in(data).emit("Server-send-danhsach-users", members_new_room);
+    }
+  });
+
+  socket.on("Client-send-tao-nickname", function(data){
+    var pos_user = mangUsers.pos("name", socket.Username);
+    if (mangUsers[pos_user].roomname === ""){
+      mangUsers[pos_user].nickname = data;
+      socket.emit("Server-send-nickname-ok", data);
+    } else {
+      var pos_room = mangRooms.pos("name", mangUsers[pos_user].roomname);
+      if (mangRooms[pos_room].members.indexOf(data) === -1){
+        mangRooms[pos_room].members.splice(mangRooms[pos_room].members.indexOf(mangUsers[pos_user].nickname), 1);
+        mangRooms[pos_room].members.push(data);
+        mangUsers[pos_user].nickname = data;
+        socket.emit("Server-send-nickname-ok", data);
+        io.in(mangUsers[pos_user].roomname ).emit("Server-send-danhsach-users", mangRooms[pos_room].members);
+      } else {
+        socket.emit("Server-send-nickname-nook", data);
+      }
+    }
+  });
+  
+  socket.on("Client-send-logout", function(){
+    var pos_user = mangUsers.pos("name", socket.Username);
+    if (mangUsers[pos_user].roomname !== ''){
+      var list_members = mangRooms[mangRooms.pos("name", mangUsers[pos_user].roomname)].members;
+      list_members.splice(list_members.indexOf(socket.Username), 1); /* xoa ten user trong room*/
+      if (list_members.length > 0) {
+        socket.to(mangUsers[pos_user].roomname).emit("Server-send-danhsach-users", list_members);
+      } else {
+        mangRooms.splice(mangRooms.pos("name", mangUsers[pos_user].roomname), 1); /* xoa room*/
+        socket.broadcast.emit('Server-send-rooms', mangRooms.list("name"));
+      }
+    }
+    mangUsers.splice(mangUsers.pos("name", socket.Username), 1); /* xoa user*/
+  });
+  
+  socket.on('Client-send-msg', function(msg){
+    var msg_gui = mangUsers[mangUsers.pos("name", socket.Username)].nickname + ": " + msg;
+    io.in(mangUsers[mangUsers.pos("name", socket.Username)].roomname).emit("Server-send-msg", msg_gui);
+  });
+  
+  socket.on('Client-send-private-msg', function(msg){
+    if (mangUsers.pos("nickname", msg.name) !== -1){
+      var socket_id = mangUsers[mangUsers.pos("nickname", msg.name)].socketid;
+      socket.to(socket_id).emit('Server-send-msg', mangUsers[mangUsers.pos("socketid", socket.id)].nickname + " gui den ban: " + msg.message);
+      socket.emit('Server-send-msg', "Ban vua gui den " + msg.name + ": " + msg.message);
+    }  
+  });
+});
+
