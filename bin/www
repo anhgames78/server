@@ -126,12 +126,18 @@ function onListening() {
 }
 
 io.on('connection', function(socket){
+
+  socket.on('disconnect', function () {
+      console.log(socket.Username + " is disconnected!!!");
+  });
   
   socket.on("Client-send-username", function(data){
     socket.Username = data;
     if (mangUsers.pos("name", data) === -1){                                               /*user moi*/
+      console.log(socket.Username + " is connected!!!");
       mangUsers.push(new user(data,socket.id,"",""));
     } else {                                                                       /*user refresh: update socket id and send client store nickname and room*/
+      console.log(socket.Username + " is reconnected!!!");
       mangUsers[mangUsers.pos("name", data)].socketid = socket.id;
       socket.emit('Server-send-info', mangUsers[mangUsers.pos("name", data)]);
       if (mangUsers[mangUsers.pos("name", data)].roomname !== "") {
@@ -168,7 +174,11 @@ io.on('connection', function(socket){
           mangRooms[pos_old_room].members = members_old_room;
           socket.to(mangUsers[pos_user].roomname).emit("Server-send-danhsach-users", members_old_room);
         } else {
-          mangRooms.splice(pos_old_room, 1);
+          if (mangUsers[pos_user].roomname !== "Toan" && mangUsers[pos_user].roomname !== "Ly" && mangUsers[pos_user].roomname !== "Hoa"){
+            mangRooms.splice(pos_old_room, 1); /* xoa room*/
+          } else {
+            mangRooms[pos_old_room].members = [];
+          }
         }
       }
       members_new_room.push(user_nickname);
@@ -209,23 +219,32 @@ io.on('connection', function(socket){
     var pos_user = mangUsers.pos("name", socket.Username);
     if (mangUsers[pos_user].roomname !== ''){
       var list_members = mangRooms[mangRooms.pos("name", mangUsers[pos_user].roomname)].members;
-      list_members.splice(list_members.indexOf(socket.Username), 1); /* xoa ten user trong room*/
+      list_members.splice(list_members.indexOf(mangUsers[pos_user].nickname), 1); /* xoa ten user trong room*/
       if (list_members.length > 0) {
         socket.to(mangUsers[pos_user].roomname).emit("Server-send-danhsach-users", list_members);
+        mangRooms[mangRooms.pos("name", mangUsers[pos_user].roomname)].members = list_members;
       } else {
-        mangRooms.splice(mangRooms.pos("name", mangUsers[pos_user].roomname), 1); /* xoa room*/
-        socket.broadcast.emit('Server-send-rooms', mangRooms.list("name"));
+        if (mangUsers[pos_user].roomname !== "Toan" && mangUsers[pos_user].roomname !== "Ly" && mangUsers[pos_user].roomname !== "Hoa"){
+          mangRooms.splice(mangRooms.pos("name", mangUsers[pos_user].roomname), 1); /* xoa room*/
+          socket.broadcast.emit('Server-send-rooms', mangRooms.list("name"));
+        } else {
+          mangRooms[mangRooms.pos("name", mangUsers[pos_user].roomname)].members = [];
+        }
       }
     }
     mangUsers.splice(mangUsers.pos("name", socket.Username), 1); /* xoa user*/
   });
   
   socket.on('Client-send-msg', function(msg){
+    console.log(msg);
+    console.log(mangUsers);
     var msg_gui = mangUsers[mangUsers.pos("name", socket.Username)].nickname + ": " + msg;
     io.in(mangUsers[mangUsers.pos("name", socket.Username)].roomname).emit("Server-send-msg", msg_gui);
   });
   
   socket.on('Client-send-private-msg', function(msg){
+    console.log(msg);
+    console.log(mangUsers);
     if (mangUsers.pos("nickname", msg.name) !== -1){
       var socket_id = mangUsers[mangUsers.pos("nickname", msg.name)].socketid;
       socket.to(socket_id).emit('Server-send-msg', mangUsers[mangUsers.pos("socketid", socket.id)].nickname + " gui den ban: " + msg.message);

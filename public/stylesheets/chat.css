@@ -93,6 +93,12 @@
   grid-area: user_list;
   background-color: none;
   justify-self: center;
+  border: none;
+  padding: 5px;
+  font: 24px/36px sans-serif;
+  width: 200px;
+  height: 200px;
+  overflow: scroll;
 }
 
 .chat_list {
@@ -154,4 +160,24 @@
 .inline { 
   display: inline-block;
   margin: 2px;
+}
+
+/* Scrollbar styles */
+::-webkit-scrollbar {
+width: 12px;
+height: 12px;
+}
+
+::-webkit-scrollbar-track {
+border: 1px solid yellowgreen;
+border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+background: yellowgreen;  
+border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+background: #88ba1c;  
 }
